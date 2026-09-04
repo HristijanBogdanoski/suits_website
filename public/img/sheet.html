@@ -1,0 +1,11 @@
+<meta charset="utf-8"><style>
+body{background:#F1EEE7;margin:0;padding:14px;font:11px -apple-system,sans-serif;color:#191A1C}
+.g{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+figure{margin:0}img{width:100%;height:210px;object-fit:cover;border:1px solid #CFC8B8;background:#fff;display:block}
+figcaption{margin-top:4px;font-weight:600}
+</style>
+<div class="g" id="g"></div>
+<script>
+const N=['tux-white','tux-mannequin','formal-closeup','wool-blazer','m1','m2','m3','m4','m5','m6'];
+document.getElementById('g').innerHTML=N.map(n=>`<figure><img src="${n}.jpg"><figcaption>${n}</figcaption></figure>`).join('');
+</script>

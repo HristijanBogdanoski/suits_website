@@ -1,0 +1,267 @@
+<title>VESTRA Atelier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&family=Archivo:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --pearl:#F1EEE7; --bone:#E5E0D4; --chalk:#FAF8F4;
+    --ink:#191A1C; --ash:#6E6A61; --hair:#CFC8B8; --oxblood:#7E3A34;
+    --display:"Bodoni Moda",Didot,"Times New Roman",serif;
+    --sans:"Archivo","Helvetica Neue",Arial,sans-serif;
+    --gut:clamp(20px,4vw,64px);
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--pearl); color:var(--ink); font-family:var(--sans); font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased}
+  body.is-locked{overflow:hidden}
+  h1,h2,h3{font-family:var(--display); font-weight:400; text-wrap:balance; margin:0; letter-spacing:-.01em}
+  a{color:inherit}
+  img{max-width:100%; display:block}
+  .lbl{font-size:10px; font-weight:600; letter-spacing:.24em; text-transform:uppercase; color:var(--ash); font-variant-numeric:tabular-nums}
+  :focus-visible{outline:2px solid var(--oxblood); outline-offset:3px}
+
+  .nav{position:fixed; top:0; left:0; right:0; z-index:5; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px var(--gut); border-bottom:1px solid transparent; transition:background .4s ease,border-color .4s ease}
+  .nav.is-stuck{background:rgba(241,238,231,.85); backdrop-filter:blur(14px); border-bottom-color:var(--hair)}
+  .mark{font-family:var(--display); font-size:19px; letter-spacing:.42em; padding-left:.42em}
+  .nav-r{display:flex; align-items:center; gap:clamp(14px,2vw,30px)}
+  .nav-r a{text-decoration:none}
+  .chip{border:1px solid var(--hair); border-radius:999px; padding:4px 11px}
+
+  #hero{position:relative; height:100dvh; min-height:640px; display:grid;
+    grid-template-columns:minmax(230px,1fr) minmax(0,1.9fr) minmax(196px,.9fr);
+    align-items:stretch; gap:var(--gut); padding:104px var(--gut) 84px}
+  .hero-title{align-self:end; z-index:2}
+  .hero-title h1{font-size:clamp(36px,4.7vw,68px); line-height:.94; letter-spacing:-.02em}
+  .hero-title p{margin:18px 0 0; max-width:30ch; color:var(--ash); font-size:14.5px}
+
+  /* the stage: two photographic plates, the second wiping over the first */
+  #stage{position:relative; background:var(--pearl); overflow:hidden; touch-action:none}
+  .plates{position:absolute; inset:0}
+  .plate{position:absolute; inset:0; background-position:center; background-size:cover; transform-origin:center center; will-change:transform,clip-path}
+  #gl{display:block; width:100%; height:100%; cursor:grab; touch-action:none}
+  #gl:active{cursor:grabbing}
+  .loading{position:absolute; inset:0; display:grid; place-content:center; gap:6px; justify-items:center; transition:opacity .6s ease}
+  .loading span:first-child{font-family:var(--display); font-size:26px; font-variant-numeric:tabular-nums}
+  body.model-ready .loading{opacity:0; pointer-events:none}
+  .veil{position:absolute; inset:0; background:var(--pearl); opacity:.10; pointer-events:none}
+  .rule{position:absolute; inset:0; box-shadow:inset 0 0 0 1px rgba(126,58,52,0); pointer-events:none; transition:box-shadow .6s ease}
+  .rule.on{box-shadow:inset 0 0 0 1px rgba(126,58,52,.55)}
+
+  .col-r{display:flex; flex-direction:column; justify-content:space-between; align-items:flex-end; text-align:right; gap:32px}
+  .rail{display:flex; flex-direction:column; gap:20px; align-items:flex-end}
+  .datum{display:flex; flex-direction:column; gap:3px}
+  .datum b{font-family:var(--display); font-size:23px; font-weight:400; font-variant-numeric:tabular-nums; line-height:1.1}
+  .chapters{display:flex; flex-direction:column; gap:11px; list-style:none; margin:0; padding:0}
+  .chapters li{display:flex; gap:11px; justify-content:flex-end; align-items:baseline; font-size:12.5px; color:var(--ash); opacity:.45; transition:opacity .5s ease,color .5s ease}
+  .chapters li i{font-style:normal; font-variant-numeric:tabular-nums; font-size:10px; letter-spacing:.1em}
+  .chapters li.is-on{opacity:1; color:var(--ink)}
+  .chapters li.is-on i{color:var(--oxblood)}
+
+  #hint{position:absolute; left:50%; bottom:132px; transform:translateX(-50%); display:flex; align-items:center; gap:10px; transition:opacity .5s ease; pointer-events:none}
+  #hint svg{animation:nudge 1.8s ease-in-out infinite}
+  @keyframes nudge{0%,100%{transform:translateY(0);opacity:.45}50%{transform:translateY(4px);opacity:1}}
+  #skip{position:absolute; right:var(--gut); bottom:30px; z-index:3; background:none; border:0; border-bottom:1px solid var(--hair); padding:2px 0; cursor:pointer; font:inherit; font-size:10px; font-weight:600; letter-spacing:.24em; text-transform:uppercase; color:var(--ash)}
+  #skip:hover{color:var(--oxblood); border-bottom-color:var(--oxblood)}
+
+  .cloths{position:absolute; left:50%; bottom:64px; transform:translateX(-50%); z-index:3;
+    display:flex; gap:6px; flex-wrap:wrap; justify-content:center}
+  .cloths button{display:flex; align-items:center; gap:7px; cursor:pointer; font:inherit;
+    background:rgba(250,248,244,.7); backdrop-filter:blur(8px);
+    border:1px solid var(--hair); border-radius:999px; padding:6px 13px 6px 7px;
+    font-size:11px; font-weight:500; letter-spacing:.04em; color:var(--ash);
+    transition:border-color .3s ease,color .3s ease}
+  .cloths button i{width:15px; height:15px; border-radius:50%; box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+  .cloths button:hover{color:var(--ink); border-color:var(--ash)}
+  .cloths button[aria-pressed="true"]{color:var(--ink); border-color:var(--oxblood)}
+  @media (max-width:860px){ .cloths{bottom:56px} .cloths button span{display:none} }
+  .scrub{position:absolute; left:0; right:0; bottom:0; height:2px; background:var(--hair)}
+  .scrub i{display:block; height:100%; background:var(--oxblood); transform:scaleX(0); transform-origin:left center}
+
+  .band{padding:clamp(80px,11vh,140px) var(--gut); border-top:1px solid var(--hair)}
+  .band-head{display:flex; justify-content:space-between; align-items:flex-end; gap:24px; flex-wrap:wrap; margin-bottom:clamp(34px,5vw,62px)}
+  .band-head h2{font-size:clamp(30px,4.4vw,58px); line-height:1}
+  .band-head p{margin:0; max-width:40ch; color:var(--ash); font-size:14.5px}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(258px,1fr)); gap:clamp(22px,2.8vw,44px)}
+  @media (min-width:900px){ .grid{grid-template-columns:repeat(3,1fr)} }
+  .card{background:none; border:0; padding:0; margin:0; font:inherit; color:inherit; text-align:left; cursor:pointer; display:flex; flex-direction:column; gap:16px}
+  .swatch{aspect-ratio:4/5; position:relative; overflow:hidden; transition:transform .6s cubic-bezier(.2,.7,.3,1)}
+  .card:hover .swatch,.card:focus-visible .swatch{transform:translateY(-6px)}
+  .swatch::after{content:""; position:absolute; inset:0; box-shadow:inset 0 0 0 1px rgba(25,26,28,.10)}
+  .fold{position:absolute; inset:0; background:linear-gradient(180deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 22%,rgba(0,0,0,0) 55%,rgba(0,0,0,.17) 100%)}
+  .card-meta{display:flex; flex-direction:column; gap:5px; padding-top:13px; border-top:1px solid var(--hair); transition:border-color .45s ease}
+  .card:hover .card-meta{border-top-color:var(--oxblood)}
+  .card-meta .row{display:flex; justify-content:space-between; align-items:baseline; gap:14px}
+  .card-meta h3{font-size:25px; line-height:1.1}
+  .card-meta .f{font-size:12.5px; color:var(--ash)}
+  .price{font-family:var(--display); font-size:17px; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .price small{font-size:11px; color:var(--ash)}
+
+  /* atelier: an asymmetric plate layout, captions doing real work */
+  .atelier{display:grid; grid-template-columns:repeat(12,1fr); gap:clamp(20px,2.4vw,38px); align-items:end}
+  .atelier figure{margin:0; grid-column:span 12}
+  .atelier img{width:100%; height:100%; aspect-ratio:4/5; object-fit:cover; filter:saturate(.88) sepia(.07) contrast(1.03)}
+  .atelier figcaption{margin-top:11px; font-size:12.5px; color:var(--ash)}
+  .atelier figcaption b{display:block; color:var(--ink); font-weight:500; font-size:13.5px; margin-bottom:2px}
+  .a-text{grid-column:span 12; align-self:center}
+  .a-text h3{font-size:clamp(22px,2.4vw,32px); margin-bottom:14px}
+  .a-text p{margin:0 0 14px; color:var(--ash); font-size:14.5px; max-width:36ch}
+  @media (min-width:900px){
+    .atelier .a1{grid-column:span 5} .atelier .a1 img{aspect-ratio:3/4}
+    .atelier .a-text{grid-column:span 3; padding-bottom:34px}
+    .atelier .a2{grid-column:span 4} .atelier .a2 img{aspect-ratio:2/3}
+    .atelier .a3{grid-column:5 / span 8} .atelier .a3 img{aspect-ratio:16/9}
+  }
+
+  .notes{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:clamp(28px,4vw,64px)}
+  .notes h3{font-size:20px; margin-bottom:14px}
+  .notes ul{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:13px}
+  .notes li{display:flex; gap:12px; font-size:14.5px; color:var(--ash); line-height:1.5}
+  .notes li::before{content:""; flex:0 0 auto; width:14px; height:1px; background:var(--hair); margin-top:11px}
+  .notes li b{color:var(--ink); font-weight:500}
+  .notes li.ask::before{background:var(--oxblood)}
+  footer{padding:34px var(--gut) 44px; border-top:1px solid var(--hair); display:flex; justify-content:space-between; gap:18px; flex-wrap:wrap}
+  .reveal{opacity:0; transform:translateY(18px); transition:opacity .9s cubic-bezier(.2,.7,.3,1),transform .9s cubic-bezier(.2,.7,.3,1)}
+  .reveal.in{opacity:1; transform:none}
+
+  @media (max-width:860px){
+    #hero{grid-template-columns:1fr; grid-template-rows:auto 1fr auto; padding-top:88px; gap:20px}
+    #stage{min-height:46vh}
+    .col-r{align-items:flex-start; text-align:left}
+    .col-r .chapters{display:none}
+    .rail{flex-direction:row; flex-wrap:wrap; gap:14px 26px; align-items:flex-start}
+    .hero-title h1{font-size:clamp(34px,9vw,52px)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .reveal{opacity:1; transform:none; transition:none}
+    #hint svg{animation:none}
+    .card:hover .swatch{transform:none}
+  }
+</style>
+
+<nav class="nav">
+  <span class="mark">VESTRA</span>
+  <span class="nav-r lbl">
+    <a href="#collection">Collection</a>
+    <a href="#notes">Notes</a>
+    <span class="chip">Prototype</span>
+  </span>
+</nav>
+
+<section id="hero">
+  <div class="hero-title">
+    <h1>Turn it<br>in your<br>hands.</h1>
+    <p>Scroll to walk around the cut. Grab it and spin it yourself. Six cloths, one pattern &#8212; switch below.</p>
+  </div>
+
+  <div id="stage">
+    <div class="plates" id="plates">
+      <canvas id="gl"></canvas>
+      <div class="loading"><span id="load-pct">0%</span> <span class="lbl">Loading the cut</span></div>
+    </div>
+  </div>
+
+  <div class="col-r">
+    <div class="rail">
+      <div class="datum"><b id="m-rot">000&#176;</b><span class="lbl">Rotation</span></div>
+      <div class="datum"><b id="m-chap">01 / 04</b><span class="lbl">Chapter</span></div>
+      <div class="datum"><b id="m-step" style="font-size:17px">Front</b><span class="lbl">Step</span></div>
+      <div class="datum"><b id="m-cloth" style="font-size:17px">Charcoal worsted</b><span class="lbl">Cloth &#183; <span id="m-weight">310 g</span></span></div>
+    </div>
+    <ol class="chapters">
+      <li data-chapter class="is-on"><i>01</i> Front</li>
+      <li data-chapter><i>02</i> Three-quarter</li>
+      <li data-chapter><i>03</i> Profile</li>
+      <li data-chapter><i>04</i> Back</li>
+    </ol>
+  </div>
+
+  <div id="hint" class="lbl">
+    Scroll to turn
+    <svg width="12" height="16" viewBox="0 0 12 16" fill="none" aria-hidden="true"><path d="M6 1v13M1.5 9.5 6 14l4.5-4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div class="cloths" role="group" aria-label="Choose cloth">
+    <button data-cloth="#20242f" data-rough="0.62" data-flat="0" data-name="Midnight barathea" data-weight="290 g" aria-pressed="false"><i style="background:#20242f"></i>Notte</button>
+    <button data-cloth="#6a6e74" data-rough="0.86" data-flat="1" data-name="Brushed flannel" data-weight="340 g" aria-pressed="false"><i style="background:#6a6e74"></i>Fumo</button>
+    <button data-cloth="#d9cdb4" data-rough="0.90" data-flat="1" data-name="Irish linen" data-weight="250 g" aria-pressed="false"><i style="background:#d9cdb4"></i>Avorio</button>
+    <button data-cloth="#454c3c" data-rough="0.88" data-flat="1" data-name="Donegal tweed" data-weight="380 g" aria-pressed="false"><i style="background:#454c3c"></i>Bosco</button>
+    <button data-cloth="#33353a" data-rough="0.72" data-flat="0" data-name="Charcoal worsted" data-weight="310 g" aria-pressed="true"><i style="background:#33353a"></i>Corvo</button>
+    <button data-cloth="#77543a" data-rough="0.84" data-flat="1" data-name="Cotton twill" data-weight="260 g" aria-pressed="false"><i style="background:#77543a"></i>Tabacco</button>
+  </div>
+  <button id="skip" type="button">Skip to the collection</button>
+  <div class="scrub"><i id="scrub-bar"></i></div>
+</section>
+
+<section class="band" id="collection">
+  <div class="band-head reveal">
+    <h2>The collection</h2>
+    <p>Presented as the cloth book, the way it is on the cutting table &#8212; the bolt first, the garment second.</p>
+  </div>
+  <div class="grid" id="grid"></div>
+</section>
+
+
+<section class="band" id="notes">
+  <div class="band-head reveal"><h2>Notes on this prototype</h2><p>Built to be argued with. Nothing here is precious.</p></div>
+  <div class="notes reveal">
+    <div>
+      <h3>What's working</h3>
+      <ul>
+        <li><b>The scroll lock.</b> The page freezes and your wheel drives the reveal, then it releases the moment the sequence finishes.</li>
+        <li><b>The release valves.</b> It re-engages if you scroll back up, never engages for reduced-motion, and Escape, Tab or Skip always gets you out. The component this came from had none of these &#8212; it trapped the page permanently.</li>
+        <li><b>Everything is free.</b> Photography is Pexels stock, licensed for commercial use with no attribution. Nothing here has been paid for.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What's placeholder</h3>
+      <ul>
+        <li><b>The photographs</b> are stock. They set the register; they are not your garments.</li>
+        <li><b>Names, cloths and prices</b> are invented and live in one list.</li>
+        <li><b>The cloth book is drawn, not shot</b> &#8212; each weave is CSS, which is why the six are perfectly consistent. Real bolt photography would replace them.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What I'd do next</h3>
+      <ul>
+        <li class="ask"><b>Decide on the hero.</b> This reveal, or the generated shot of the tuxedo dropping onto the form. Roughly $19 buys the second.</li>
+        <li class="ask"><b>Open the cards.</b> A detail view with the full spec and a fitting request.</li>
+        <li class="ask"><b>Give me one reference.</b> Any site whose feel you want &#8212; I'll take the mechanism from it, the way I took the scroll lock from the one you sent.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer class="lbl">
+  <span>VESTRA &#8212; frontend prototype</span>
+  <span>Model: Black Suit by TopNotch Assets &#183; CC Attribution</span>
+</footer>
+
+<script>
+(function(){
+  var CLOTHS = [
+    ['Notte','Midnight barathea','Peak lapel, satin faced','4 200','#1b2030','twill'],
+    ['Fumo','Brushed flannel','Single, two-button','3 150','#6a6e74','flannel'],
+    ['Avorio','Irish linen','Unstructured','2 800','#d9cdb4','linen'],
+    ['Bosco','Donegal tweed','Three-roll-two','3 600','#454c3c','tweed'],
+    ['Corvo','Charcoal worsted','Single, peak lapel','3 300','#33353a','twill'],
+    ['Tabacco','Cotton twill','Soft shoulder','2 650','#77543a','twill']
+  ];
+  function weave(kind, hex){
+    if (kind === 'linen') return 'repeating-linear-gradient(90deg,rgba(255,255,255,.13) 0 1px,transparent 1px 3px),repeating-linear-gradient(0deg,rgba(0,0,0,.10) 0 1px,transparent 1px 3px),'+hex;
+    if (kind === 'flannel') return 'radial-gradient(circle at 30% 25%,rgba(255,255,255,.10),transparent 55%),repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 2px,transparent 2px 5px),'+hex;
+    if (kind === 'tweed') return 'radial-gradient(circle at 20% 30%,rgba(255,255,255,.16) 0 1px,transparent 2px),radial-gradient(circle at 70% 60%,rgba(0,0,0,.22) 0 1px,transparent 2px),repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 2px,transparent 2px 6px),'+hex;
+    return 'repeating-linear-gradient(63deg,rgba(255,255,255,.075) 0 1px,transparent 1px 4px),'+hex;
+  }
+  document.getElementById('grid').innerHTML = CLOTHS.map(function(c){
+    return '<button class="card" type="button">'
+      + '<span class="swatch" style="background:'+weave(c[5],c[4])+'"><span class="fold"></span></span>'
+      + '<span class="card-meta"><span class="row"><h3>'+c[0]+'</h3>'
+      + '<span class="price"><small>&#8364;</small> '+c[3]+'</span></span>'
+      + '<span class="f">'+c[1]+' &#183; '+c[2]+'</span></span></button>';
+  }).join('');
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){ if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+})();
+</script>
+<script src="viewer.js"></script>

@@ -1,0 +1,15 @@
+{
+  "name": "vestra-suits",
+  "private": true,
+  "type": "module",
+  "description": "Frontend prototype for a made-to-measure suit house",
+  "scripts": {
+    "build": "esbuild src/viewer.js --bundle --minify --format=iife --outfile=viewer/viewer.js --define:MODEL_URL='\"/model/BlackSuit.web.glb\"' && node scripts/inline.mjs",
+    "dev": "python3 -m http.server 8781 --directory viewer",
+    "dev:csp": "node scripts/serve-csp.mjs"
+  },
+  "devDependencies": {
+    "three": "0.166.1",
+    "esbuild": "^0.23.0"
+  }
+}

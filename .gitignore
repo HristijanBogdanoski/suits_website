@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# local agent guidance
+CLAUDE.md
+**/CLAUDE.md
+
+# build output — regenerate with `npm run build`
+build/vestra-3d.html
+build/vestra.html
+viewer/viewer.js
+
+# raw model download — the extracted GLB under public/model/ is what's used
+public/model/black-suit.zip
+
+# test/tooling noise
+.playwright-mcp/
+*.log
+
+# macOS
+.DS_Store
