@@ -91,15 +91,81 @@ function onLoaded(gltf){
   });
   window.__cloth = clothMats;
 
-  // Two ways to recolour. Dark cloths multiply the woven diffuse, which keeps every
-  // seam and shadow the artist baked in. Light cloths can't be reached that way -
-  // multiplying a charcoal texture only ever gets darker - so those drop the diffuse
-  // and keep the normal map, which is where the weave actually lives.
-  window.setCloth = function(hex, rough, flat){
-    const c = new THREE.Color(hex);
+  // Recolouring keeps the cloth's shading and replaces only its colour.
+  //
+  // Tinting over the diffuse was wrong in both directions: multiplying a colour
+  // over a near-black charcoal weave crushes everything toward black (navy and
+  // charcoal came out identical), and multiplication can never lighten, so ivory
+  // was impossible without dropping the texture and going flat.
+  //
+  // Instead, rebuild the map per cloth: take each pixel's luminance relative to
+  // the texture's mean, and apply that ratio to the target colour. Weave, seams
+  // and baked shadows survive at any lightness. Canvas work only - no requests.
+  const MAX_TEX = 1024;
+
+  function sourceStats(mat){
+    if (mat.userData.stats) return mat.userData.stats;
+    const img = mat.userData.origMap && mat.userData.origMap.image;
+    if (!img || !img.width) return null;
+    const w = Math.min(img.width, MAX_TEX), h = Math.min(img.height, MAX_TEX);
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const cx = c.getContext('2d', { willReadFrequently: true });
+    cx.drawImage(img, 0, 0, w, h);
+    const data = cx.getImageData(0, 0, w, h);
+    let sum = 0;
+    const lum = new Float32Array(w * h);
+    for (let i = 0, p = 0; i < data.data.length; i += 4, p++){
+      const l = (0.2126 * data.data[i] + 0.7152 * data.data[i+1] + 0.0722 * data.data[i+2]) / 255;
+      lum[p] = l; sum += l;
+    }
+    mat.userData.stats = { w, h, lum, mean: Math.max(sum / (w * h), 0.02), alpha: data };
+    return mat.userData.stats;
+  }
+
+  function tintedMap(mat, hex){
+    mat.userData.tints = mat.userData.tints || {};
+    if (mat.userData.tints[hex]) return mat.userData.tints[hex];
+    const st = sourceStats(mat);
+    if (!st) return null;
+
+    const target = new THREE.Color(hex);
+    const c = document.createElement('canvas');
+    c.width = st.w; c.height = st.h;
+    const cx = c.getContext('2d');
+    const out = cx.createImageData(st.w, st.h);
+    const tr = target.r * 255, tg = target.g * 255, tb = target.b * 255;
+
+    for (let p = 0, i = 0; p < st.lum.length; p++, i += 4){
+      // ratio of this pixel's brightness to the cloth's average, so relative
+      // shading is preserved while absolute lightness comes from the target
+      const k = Math.min(st.lum[p] / st.mean, 2.2);
+      out.data[i]   = Math.min(tr * k, 255);
+      out.data[i+1] = Math.min(tg * k, 255);
+      out.data[i+2] = Math.min(tb * k, 255);
+      out.data[i+3] = st.alpha.data[i+3];
+    }
+    cx.putImageData(out, 0, 0);
+
+    const src = mat.userData.origMap;
+    const tex = new THREE.CanvasTexture(c);
+    // glTF maps are flipY:false; a CanvasTexture defaults to true and would
+    // render the cloth upside down against the model's UVs
+    tex.flipY = src.flipY;
+    tex.wrapS = src.wrapS; tex.wrapT = src.wrapT;
+    tex.repeat.copy(src.repeat); tex.offset.copy(src.offset);
+    tex.colorSpace = src.colorSpace;
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    tex.needsUpdate = true;
+    mat.userData.tints[hex] = tex;
+    return tex;
+  }
+
+  window.setCloth = function(hex, rough){
     clothMats.forEach(m => {
-      if (flat){ m.map = null; m.color.copy(c); }
-      else { m.map = m.userData.origMap; m.color.copy(c).multiplyScalar(2.6); }
+      const tex = tintedMap(m, hex);
+      if (tex){ m.map = tex; m.color.setHex(0xffffff); }
+      else { m.map = null; m.color.set(hex); }   // fallback if the image is unreadable
       m.roughness = rough;
       m.needsUpdate = true;
     });
@@ -111,6 +177,12 @@ function onLoaded(gltf){
   report.meshes = [];
   root.traverse(o => { if (o.isMesh) report.meshes.push(o.name); });
   window.__model = { root, mats, report };
+
+  // Apply the selected cloth immediately. Left alone the suit shows its raw
+  // texture while a swatch claims to be active, so the first click looked like
+  // a downgrade rather than a change.
+  const first = document.querySelector('[data-cloth][aria-pressed="true"]');
+  if (first) window.setCloth(first.dataset.cloth, parseFloat(first.dataset.rough));
 
 
   ready = true;
@@ -201,7 +273,7 @@ addEventListener('keydown', e => {
 document.querySelectorAll('[data-cloth]').forEach(btn => {
   btn.addEventListener('click', () => {
     const d = btn.dataset;
-    if (window.setCloth) window.setCloth(d.cloth, parseFloat(d.rough), d.flat === '1');
+    if (window.setCloth) window.setCloth(d.cloth, parseFloat(d.rough));
     document.querySelectorAll('[data-cloth]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
     const n = document.getElementById('m-cloth'); if (n) n.textContent = d.name;
     const w = document.getElementById('m-weight'); if (w) w.textContent = d.weight;
