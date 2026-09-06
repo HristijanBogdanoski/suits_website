@@ -65,14 +65,25 @@ function onLoaded(gltf){
     if (o.isMesh && o.material){
       const m = o.material;
       if (!mats.includes(m)) mats.push(m);
-      const tex = m.map && m.map.image && (m.map.image.src || m.map.name || '');
+      // Prefer the glTF texture name. image.src is a blob: UUID when the model is
+      // parsed from memory, which carries no garment information - reading it first
+      // silently broke cloth matching once already.
+      const tex = (m.map && (m.map.name || (m.map.image && m.map.image.src))) || '';
       m.userData.texName = String(tex).split('/').pop() || '(embedded)';
       m.envMapIntensity = 0.85;
     }
   });
 
   // the suit cloth is whatever wears the jacket / trouser diffuse; shirt, belt and shoes stay put
-  const clothMats = mats.filter(m => /jacket|pants/.test(m.userData.texName));
+  let clothMats = mats.filter(m => /jacket|pants/.test(m.userData.texName));
+  // Material names are the fallback identifier: they survive parsing when texture
+  // names do not. Material.001 is the jacket, Material.006 the trousers.
+  if (!clothMats.length) clothMats = mats.filter(m => /Material\.(001|006)$/.test(m.name || ''));
+  if (clothMats.length !== 2){
+    console.warn('VESTRA: expected 2 cloth materials, matched ' + clothMats.length +
+                 ' - recolouring will be wrong. Materials seen: ' +
+                 mats.map(m => (m.name || '?') + '/' + m.userData.texName).join(', '));
+  }
   clothMats.forEach(m => {
     m.userData.origMap = m.map;
     m.userData.origColor = m.color.clone();
@@ -100,6 +111,8 @@ function onLoaded(gltf){
   report.meshes = [];
   root.traverse(o => { if (o.isMesh) report.meshes.push(o.name); });
   window.__model = { root, mats, report };
+
+
   ready = true;
   document.body.classList.add('model-ready');
 }
@@ -226,8 +239,8 @@ resize();
   const p = current;
   pivot.rotation.y = p * Math.PI * 2 + spin;
 
-  camera.position.set(0, 1.30, 4.85 - 0.35 * Math.sin(p * Math.PI));
-  camera.lookAt(0, 1.18, 0);
+  camera.position.set(0, 1.26, 4.62 - 0.30 * Math.sin(p * Math.PI));
+  camera.lookAt(0, 1.10, 0);
 
   if (bar) bar.style.transform = `scaleX(${p})`;
   const hint = document.getElementById('hint');
