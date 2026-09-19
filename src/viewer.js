@@ -6,7 +6,8 @@ const stage = document.getElementById('stage');
 const canvas = document.getElementById('gl');
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, powerPreference:'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// 2x on a retina panel is four times the fragment work for detail nobody sees
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
@@ -27,11 +28,11 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0xe6dfd0, 0.55));
 const key = new THREE.DirectionalLight(0xfff5ea, 2.4);
 key.position.set(1.4, 6.2, 2.6);
 key.castShadow = true;
-key.shadow.mapSize.set(2048, 2048);
+key.shadow.mapSize.set(1024, 1024);
 key.shadow.camera.near = 0.5; key.shadow.camera.far = 24;
 key.shadow.camera.left = -3; key.shadow.camera.right = 3;
 key.shadow.camera.top = 4; key.shadow.camera.bottom = -1;
-key.shadow.radius = 5; key.shadow.bias = -0.0012;
+key.shadow.radius = 3; key.shadow.bias = -0.0012;
 scene.add(key);
 const fill = new THREE.DirectionalLight(0xe8f0ff, 0.6); fill.position.set(-4, 2.4, 2.6); scene.add(fill);
 const rim  = new THREE.DirectionalLight(0xffffff, 1.5); rim.position.set(-1.8, 3.2, -4.4); scene.add(rim);
@@ -175,6 +176,7 @@ function onLoaded(gltf){
       m.roughness = rough;
       m.needsUpdate = true;
     });
+    if (typeof markDirty === 'function') markDirty();
   };
 
   report.size = [size.x.toFixed(2), size.y.toFixed(2), size.z.toFixed(2)];
@@ -189,6 +191,71 @@ function onLoaded(gltf){
     centreY: (box.min.y + size.y / 2) * s - box.min.y * s
   }};
   computeFit();
+
+  // ---- lookbook plates -------------------------------------------------
+  // Render the real garment once per cloth and hand the results to the grid.
+  // Framing is derived from the model's bounds exactly as the hero's is, so the
+  // collar cannot be clipped; the view is a three-quarter turn so the cards read
+  // as garments rather than flat elevations.
+  //
+  // Read back from a render target, not the canvas: toDataURL() on a WebGL
+  // canvas returns a stale buffer unless preserveDrawingBuffer is set, and that
+  // taxes every frame for the sake of six one-off captures. No requests are
+  // issued, so this stays within the sandbox's CSP.
+  function renderPlates(){
+    const cards = [...document.querySelectorAll('[data-plate]')];
+    if (!cards.length) return;
+
+    const W = 660, H = 825;                        // 4:5, matching the card frame
+    const b = window.__model.bounds;
+    const vFov = 26 * Math.PI / 180;
+    const MARGIN = 1.22;
+    const needV = (b.height * MARGIN / 2) / Math.tan(vFov / 2);
+    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * (W / H));
+    const needH = (b.width * MARGIN / 2) / Math.tan(hFov / 2);
+
+    const cam = new THREE.PerspectiveCamera(26, W / H, 0.1, 100);
+    cam.position.set(0, b.centreY, Math.max(needV, needH));
+    cam.lookAt(0, b.centreY, 0);
+
+    const rt = new THREE.WebGLRenderTarget(W, H, { colorSpace: THREE.SRGBColorSpace, samples: 4 });
+    const flat = document.createElement('canvas');
+    flat.width = W; flat.height = H;
+    const ctx = flat.getContext('2d');
+    const px = new Uint8Array(W * H * 4);
+    const img = ctx.createImageData(W, H);
+
+    const heroRot = pivot.rotation.y;
+    pivot.rotation.y = -0.46;                      // one three-quarter view for all six
+
+    cards.forEach(card => {
+      window.setCloth(card.dataset.plate, parseFloat(card.dataset.rough));
+
+      renderer.setRenderTarget(rt);
+      renderer.render(scene, cam);
+      renderer.readRenderTargetPixels(rt, 0, 0, W, H, px);
+      renderer.setRenderTarget(null);
+
+      // WebGL reads bottom-up; the 2D canvas expects top-down
+      for (let y = 0; y < H; y++){
+        const src = (H - 1 - y) * W * 4;
+        img.data.set(px.subarray(src, src + W * 4), y * W * 4);
+      }
+      ctx.clearRect(0, 0, W, H);
+      ctx.putImageData(img, 0, 0);
+
+      card.style.backgroundImage = 'url(' + flat.toDataURL('image/webp', 0.88) + ')';
+      card.classList.add('is-plated');
+    });
+
+    rt.dispose();
+
+    // restore the hero exactly as it was
+    pivot.rotation.y = heroRot;
+    const active = document.querySelector('[data-cloth][aria-pressed="true"]');
+    if (active) window.setCloth(active.dataset.cloth, parseFloat(active.dataset.rough));
+  }
+  requestAnimationFrame(() => requestAnimationFrame(renderPlates));
 
   // Apply the selected cloth immediately. Left alone the suit shows its raw
   // texture while a swatch claims to be active, so the first click looked like
@@ -340,7 +407,35 @@ const STEPS = ['Front','Three-quarter','Profile','Back'];
 let lastChap = -1;
 
 resize();
+
+// The loop used to redraw forever at full resolution with shadows, including
+// while the suit sat still and while it was scrolled far off screen. That is a
+// constant GPU load for no visible gain, and it makes the whole page feel heavy.
+// Render only when the stage is on screen and something has actually changed.
+let onScreen = true;
+let dirty = true;
+const markDirty = () => { dirty = true; };
+
+new IntersectionObserver(es => {
+  es.forEach(e => { onScreen = e.isIntersecting; if (onScreen) markDirty(); });
+}, { rootMargin: '120px' }).observe(stage);
+
+const _setCloth = () => markDirty();
+['pointerdown','pointermove','pointerup'].forEach(ev => stage.addEventListener(ev, markDirty));
+addEventListener('wheel', markDirty, { passive: true });
+addEventListener('touchmove', markDirty, { passive: true });
+addEventListener('keydown', markDirty);
+addEventListener('resize', markDirty);
+document.querySelectorAll('[data-cloth]').forEach(b => b.addEventListener('click', markDirty));
+
 (function frame(){
+  requestAnimationFrame(frame);
+
+  const settling = Math.abs(target - current) > 0.0004;
+  if (settling) markDirty();
+  if (!onScreen || !dirty){ return; }
+  if (!settling) dirty = false;          // one last frame, then idle
+
   current += (target - current) * (reduced ? 1 : 0.12);
   const p = current;
   pivot.rotation.y = p * Math.PI * 2 + spin;
@@ -365,7 +460,6 @@ resize();
   }
 
   renderer.render(scene, camera);
-  requestAnimationFrame(frame);
 })();
 
 if (!reduced) setTimeout(() => { if (ready) engage(); }, 400);
