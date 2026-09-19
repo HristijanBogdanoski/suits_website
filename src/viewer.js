@@ -102,6 +102,9 @@ function onLoaded(gltf){
   // the texture's mean, and apply that ratio to the target colour. Weave, seams
   // and baked shadows survive at any lightness. Canvas work only - no requests.
   const MAX_TEX = 1024;
+  // How much of the source texture's light and shade carries into a recoloured
+  // cloth. 1 keeps it all and looks dirty on pale colours; 0 is flat plastic.
+  const SHADE = 0.42;
 
   function sourceStats(mat){
     if (mat.userData.stats) return mat.userData.stats;
@@ -137,9 +140,12 @@ function onLoaded(gltf){
     const tr = target.r * 255, tg = target.g * 255, tb = target.b * 255;
 
     for (let p = 0, i = 0; p < st.lum.length; p++, i += 4){
-      // ratio of this pixel's brightness to the cloth's average, so relative
-      // shading is preserved while absolute lightness comes from the target
-      const k = Math.min(st.lum[p] / st.mean, 2.2);
+      // Ratio of this pixel's brightness to the cloth's average, so relative
+      // shading is preserved while absolute lightness comes from the target.
+      // Pulled toward 1 by SHADE: the raw ratio swings hard on a dark source
+      // texture and turns pale cloths blotchy, as if the suit were stained.
+      const raw = Math.min(st.lum[p] / st.mean, 2.2);
+      const k = 1 + (raw - 1) * SHADE;
       out.data[i]   = Math.min(tr * k, 255);
       out.data[i+1] = Math.min(tg * k, 255);
       out.data[i+2] = Math.min(tb * k, 255);
@@ -176,7 +182,13 @@ function onLoaded(gltf){
   report.materials = mats.map(m => ({ name: m.name, tex: m.userData.texName, rough: m.roughness, metal: m.metalness }));
   report.meshes = [];
   root.traverse(o => { if (o.isMesh) report.meshes.push(o.name); });
-  window.__model = { root, mats, report };
+  // widest silhouette across a full turn: arms-out width, not depth
+  window.__model = { root, mats, report, bounds: {
+    height: size.y * s,
+    width: Math.max(size.x, size.z) * s,
+    centreY: (box.min.y + size.y / 2) * s - box.min.y * s
+  }};
+  computeFit();
 
   // Apply the selected cloth immediately. Left alone the suit shows its raw
   // texture while a swatch claims to be active, so the first click looked like
@@ -289,6 +301,28 @@ stage.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX;
 stage.addEventListener('pointermove', e => { if (dragging){ spin += (e.clientX - lastX) * 0.009; lastX = e.clientX; } });
 ['pointerup','pointercancel'].forEach(ev => stage.addEventListener(ev, () => { dragging = false; }));
 
+// Framing is computed from the model's own bounds rather than hard-coded, so
+// no rotation or viewport ratio can crop the collar. The horizontal term uses
+// the widest silhouette (arms out), which is what a quarter turn presents.
+const fit = { y: 1.2, dist: 5, dolly: 0.3, half: 1.2, wide: 0.9 };
+// (fit is read directly by the render loop)
+
+function computeFit(){
+  if (!window.__model) return;
+  const b = window.__model.bounds;
+  if (!b) return;
+  const r = stage.getBoundingClientRect();
+  const aspect = Math.max(r.width / Math.max(r.height, 1), 0.2);
+  const vFov = camera.fov * Math.PI / 180;
+  const MARGIN = 1.16;
+  const needV = (b.height * MARGIN / 2) / Math.tan(vFov / 2);
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+  const needH = (b.width * MARGIN / 2) / Math.tan(hFov / 2);
+  fit.dist = Math.max(needV, needH);
+  fit.y = b.centreY;
+  fit.dolly = Math.min(0.3, fit.dist * 0.06);
+}
+
 function resize(){
   const r = stage.getBoundingClientRect();
   renderer.setSize(r.width, r.height, false);
@@ -297,7 +331,7 @@ function resize(){
   camera.aspect = r.width / r.height;
   camera.updateProjectionMatrix();
 }
-addEventListener('resize', resize);
+addEventListener('resize', () => { resize(); computeFit(); });
 
 const bar = document.getElementById('scrub-bar');
 const mRot = document.getElementById('m-rot'), mChap = document.getElementById('m-chap'), mStep = document.getElementById('m-step');
@@ -311,8 +345,9 @@ resize();
   const p = current;
   pivot.rotation.y = p * Math.PI * 2 + spin;
 
-  camera.position.set(0, 1.26, 4.62 - 0.30 * Math.sin(p * Math.PI));
-  camera.lookAt(0, 1.10, 0);
+  const f = fit;
+  camera.position.set(0, f.y, f.dist - f.dolly * Math.sin(p * Math.PI));
+  camera.lookAt(0, f.y, 0);
 
   if (bar) bar.style.transform = `scaleX(${p})`;
   const hint = document.getElementById('hint');
