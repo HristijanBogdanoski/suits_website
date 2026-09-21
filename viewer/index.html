@@ -122,6 +122,30 @@
   .notes li b{color:var(--ink); font-weight:500}
   .notes li.ask::before{background:var(--oxblood)}
   .notes li.ask::before{background:var(--oxblood)}
+  .house{display:grid; grid-template-columns:1fr; gap:clamp(30px,4vw,64px); margin-bottom:clamp(50px,6vw,84px)}
+  .house-lead p{margin:0 0 16px; font-size:clamp(15px,1.25vw,17.5px); line-height:1.65; color:var(--ash); max-width:46ch}
+  .house-lead p:first-child{color:var(--ink)}
+  .steps{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:clamp(24px,2.6vw,40px)}
+  .steps li{border-top:1px solid var(--hair); padding-top:14px}
+  .step-n{display:block; font-size:10px; font-weight:600; letter-spacing:.24em; color:var(--oxblood); margin-bottom:10px; font-variant-numeric:tabular-nums}
+  .steps h3{font-size:19px; margin-bottom:8px}
+  .steps p{margin:0; font-size:13.5px; line-height:1.6; color:var(--ash)}
+  @media (min-width:1000px){
+    .house{grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr)}
+    .steps{grid-template-columns:repeat(2,1fr)}   /* 2x2 rather than an orphaned fourth */
+  }
+
+  .facts{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:clamp(18px,2vw,32px); border-top:1px solid var(--hair); padding-top:clamp(24px,3vw,38px)}
+  .fact{display:flex; flex-direction:column; gap:4px}
+  .fact b{font-family:var(--display); font-weight:400; font-size:clamp(30px,3.4vw,44px); line-height:1; font-variant-numeric:tabular-nums}
+
+  .cta{max-width:52ch}
+  .cta h2{font-size:clamp(30px,4.4vw,58px); line-height:1; margin-bottom:18px}
+  .cta p{margin:0 0 28px; color:var(--ash); font-size:15px; line-height:1.65; max-width:42ch}
+  .cta-link{display:inline-block; text-decoration:none; font-size:11px; font-weight:600; letter-spacing:.22em; text-transform:uppercase;
+    border:1px solid var(--ink); padding:14px 26px; transition:background .35s ease, color .35s ease, border-color .35s ease}
+  .cta-link:hover{background:var(--ink); color:var(--pearl)}
+  .cta-note{display:block; margin-top:14px}
   footer{padding:34px var(--gut) 44px; border-top:1px solid var(--hair); display:flex; justify-content:space-between; gap:18px; flex-wrap:wrap}
   .reveal{opacity:0; transform:translateY(18px); transition:opacity .9s cubic-bezier(.2,.7,.3,1),transform .9s cubic-bezier(.2,.7,.3,1)}
   .reveal.in{opacity:1; transform:none}
@@ -145,7 +169,8 @@
   <span class="mark">VESTRA</span>
   <span class="nav-r lbl">
     <a href="#collection">Collection</a>
-    <a href="#notes">Notes</a>
+    <a href="#atelier">The house</a>
+    <a href="#fitting">Fittings</a>
     <span class="chip">Prototype</span>
   </span>
 </nav>
@@ -203,35 +228,66 @@
 </section>
 
 
-<section class="band" id="notes">
-  <div class="band-head reveal"><h2>Notes on this prototype</h2><p>Built to be argued with. Nothing here is precious.</p></div>
-  <div class="notes reveal">
-    <div>
-      <h3>What's working</h3>
-      <ul>
-        <li><b>The suit is a real model.</b> Scroll turns it, drag spins it, and the six swatches retint the jacket and trousers live &#8212; the shirt, belt and shoes are separate materials, so an ivory suit keeps a white shirt.</li>
-        <li><b>The scroll lock.</b> The page freezes and your wheel drives the turn, then releases the moment it completes.</li>
-        <li><b>The release valves.</b> It re-engages if you scroll back up, never engages for reduced-motion, and Escape, Tab or Skip always gets you out. The component this came from had none of these &#8212; it trapped the page permanently.</li>
-        <li><b>The collection is the garment.</b> Six live renders from the one model, captured at load, so every card shares the hero's light.</li>
-      </ul>
+<section class="band" id="atelier">
+  <div class="band-head reveal">
+    <h2>The house</h2>
+    <p>Founded in Naples, 1934. Four cutters, one pattern room, and a waiting list we have never tried to shorten.</p>
+  </div>
+
+  <div class="house reveal">
+    <div class="house-lead">
+      <p>A VESTRA suit begins as twenty-two measurements and a standing posture, drawn
+      into a paper pattern that carries your name. That pattern is cut once, corrected
+      twice, and then kept &#8212; so the second suit takes eleven weeks, and the tenth
+      takes six.</p>
+      <p>Everything is full canvas. The chest is floated, not fused, which is why the
+      jacket holds its shape after a decade and why it will take the shape of your
+      shoulders rather than insisting on its own.</p>
     </div>
-    <div>
-      <h3>What's placeholder</h3>
-      <ul>
-        <li><b>Names, cloths and prices</b> are invented and live in one list.</li>
-        <li><b>Colour, not cloth.</b> Six colourways of one weave &#8212; a real range would be six different cloths.</li>
-        <li><b>One model, six colours.</b> A real collection would need six cuts, not one recoloured six ways.</li>
-      </ul>
-    </div>
-    <div>
-      <h3>What I'd do next</h3>
-      <ul>
-        <li class="ask"><b>Open the cards.</b> A detail view with the full spec, the cloth close up, and a fitting request.</li>
-        <li class="ask"><b>Close the page properly.</b> It currently stops rather than ends &#8212; there is no invitation to book anything.</li>
-        <li class="ask"><b>Give me one reference.</b> Any site whose feel you want &#8212; I'll take the mechanism from it, the way I took the scroll lock from the one you sent.</li>
-      </ul>
-    </div>
-    </div>
+
+    <ol class="steps">
+      <li>
+        <span class="step-n">01</span>
+        <h3>The measure</h3>
+        <p>Ninety minutes. Twenty-two measurements, posture, and the way you actually
+        stand rather than how you stand when someone is looking.</p>
+      </li>
+      <li>
+        <span class="step-n">02</span>
+        <h3>The baste</h3>
+        <p>The first fitting, cut in your cloth and held with white thread. Nothing is
+        finished, so everything can still move.</p>
+      </li>
+      <li>
+        <span class="step-n">03</span>
+        <h3>The balance</h3>
+        <p>The fitting that earns the price. Collar, shoulder and drape corrected
+        against the body, not the pattern.</p>
+      </li>
+      <li>
+        <span class="step-n">04</span>
+        <h3>The finish</h3>
+        <p>Buttonholes, lining and hems by hand. Your pattern goes into the rack, where
+        it stays for life.</p>
+      </li>
+    </ol>
+  </div>
+
+  <div class="facts reveal">
+    <div class="fact"><b>11</b><span class="lbl">Weeks, first suit</span></div>
+    <div class="fact"><b>3</b><span class="lbl">Fittings, included</span></div>
+    <div class="fact"><b>22</b><span class="lbl">Measurements taken</span></div>
+    <div class="fact"><b>1934</b><span class="lbl">Naples, since</span></div>
+  </div>
+</section>
+
+<section class="band" id="fitting">
+  <div class="cta reveal">
+    <h2>Come and be measured.</h2>
+    <p>Fittings are held at the pattern room on Via Toledo, Tuesday to Saturday, by
+    appointment. Bring the shoes you intend to wear.</p>
+    <a class="cta-link" href="#fitting">Request a fitting</a>
+    <span class="cta-note lbl">No deposit until the cloth is cut</span>
   </div>
 </section>
 

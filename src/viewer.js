@@ -310,7 +310,9 @@ try {
 /* ---------- scroll lock drives rotation ---------- */
 const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const SCRUB = 2600;
+// A full turn used to cost 2600px of wheel before the lock would release,
+// which left the rest of the page unreachable long enough to read as broken.
+const SCRUB = 1250;
 let target = reduced ? 0.5 : 0, current = target, spin = 0;
 let locked = false, lockedY = 0, touchY = 0;
 
@@ -356,6 +358,19 @@ document.querySelectorAll('[data-cloth]').forEach(btn => {
     document.querySelectorAll('[data-cloth]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
     const n = document.getElementById('m-cloth'); if (n) n.textContent = d.name;
     const w = document.getElementById('m-weight'); if (w) w.textContent = d.weight;
+  });
+});
+
+// Any in-page link must release the lock before scrolling. While locked the
+// body is position:fixed, so an anchor changes the hash and moves nothing.
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const el = document.querySelector(a.getAttribute('href'));
+    if (!el) return;
+    e.preventDefault();
+    target = 1;
+    release();
+    requestAnimationFrame(() => el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' }));
   });
 });
 
